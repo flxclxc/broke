@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1B2C3D40000000000000001 /* TagAlarms.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* TagAlarms.swift */; };
+		A1B2C3D40000000000000003 /* AlarmsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* AlarmsView.swift */; };
 		F51C38D22C775953003B4EB3 /* CoreNFC.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F51C38D02C77594E003B4EB3 /* CoreNFC.framework */; };
 		F51C38D72C775CAF003B4EB3 /* AppBlocker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51C38D62C775CAF003B4EB3 /* AppBlocker.swift */; };
 		F51C38D92C775CEC003B4EB3 /* NfcReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51C38D82C775CEC003B4EB3 /* NfcReader.swift */; };
@@ -14,8 +16,6 @@
 		F51C38E12C77DADA003B4EB3 /* ProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51C38E02C77DADA003B4EB3 /* ProfileManager.swift */; };
 		F51C38E42C77E847003B4EB3 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = F51C38E32C77E847003B4EB3 /* SFSymbolsPicker */; };
 		F51C38E82C78ADB5003B4EB3 /* ProfilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51C38E72C78ADB5003B4EB3 /* ProfilePicker.swift */; };
-		A1B2C3D40000000000000001 /* TagAlarms.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000002 /* TagAlarms.swift */; };
-		A1B2C3D40000000000000003 /* AlarmsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000004 /* AlarmsView.swift */; };
 		F51C38EA2C78B47A003B4EB3 /* ProfileFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F51C38E92C78B47A003B4EB3 /* ProfileFormView.swift */; };
 		F5A3B05F2C733E3400BD6C7F /* BrokeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A3B05E2C733E3400BD6C7F /* BrokeApp.swift */; };
 		F5A3B0632C733E3500BD6C7F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F5A3B0622C733E3500BD6C7F /* Assets.xcassets */; };
@@ -23,6 +23,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A1B2C3D40000000000000002 /* TagAlarms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagAlarms.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000004 /* AlarmsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmsView.swift; sourceTree = "<group>"; };
 		F51C38D02C77594E003B4EB3 /* CoreNFC.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreNFC.framework; path = System/Library/Frameworks/CoreNFC.framework; sourceTree = SDKROOT; };
 		F51C38D52C775AAF003B4EB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F51C38D62C775CAF003B4EB3 /* AppBlocker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppBlocker.swift; sourceTree = "<group>"; };
@@ -30,8 +32,6 @@
 		F51C38DA2C775D0B003B4EB3 /* BrockerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrockerView.swift; sourceTree = "<group>"; };
 		F51C38E02C77DADA003B4EB3 /* ProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileManager.swift; sourceTree = "<group>"; };
 		F51C38E72C78ADB5003B4EB3 /* ProfilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfilePicker.swift; sourceTree = "<group>"; };
-		A1B2C3D40000000000000002 /* TagAlarms.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagAlarms.swift; sourceTree = "<group>"; };
-		A1B2C3D40000000000000004 /* AlarmsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlarmsView.swift; sourceTree = "<group>"; };
 		F51C38E92C78B47A003B4EB3 /* ProfileFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileFormView.swift; sourceTree = "<group>"; };
 		F5A3B05B2C733E3400BD6C7F /* Broke.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Broke.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5A3B05E2C733E3400BD6C7F /* BrokeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokeApp.swift; sourceTree = "<group>"; };
@@ -137,7 +137,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1430;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					F5A3B05A2C733E3400BD6C7F = {
 						CreatedOnToolsVersion = 14.3.1;
@@ -231,6 +231,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = T9M7HZ29H2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -253,6 +254,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -292,6 +294,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = T9M7HZ29H2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -307,6 +310,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
@@ -322,23 +326,27 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Broke/Preview Content\"";
-				DEVELOPMENT_TEAM = T9M7HZ29H2;
+				DEVELOPMENT_TEAM = C7D34S7545;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Broke/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Broke;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "NFC tag to read NDEF messages into the application";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "armv7 nfc";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.oztamir.Broke;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flxclxc.Broke;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -359,23 +367,27 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Broke/Preview Content\"";
-				DEVELOPMENT_TEAM = T9M7HZ29H2;
+				DEVELOPMENT_TEAM = C7D34S7545;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Broke/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Broke;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "NFC tag to read NDEF messages into the application";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "armv7 nfc";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.oztamir.Broke;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flxclxc.Broke;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
