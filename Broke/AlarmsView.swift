@@ -66,9 +66,9 @@ struct AlarmRow: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(timeString(hour: alarm.hour, minute: alarm.minute))
+                Text(clockString(alarm.hour, alarm.minute))
                     .font(.system(size: 40, weight: .light))
-                Label("\(alarm.kind.label) · \(weekdaySummary(alarm.weekdays))", systemImage: alarm.kind.icon)
+                Label("\(alarm.kind.label) · \(weekdaySummary(alarm.weekdays, emptyLabel: "Once"))", systemImage: alarm.kind.icon)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -90,7 +90,7 @@ struct AlarmFormView: View {
 
     init(alarm: TagAlarm, isNew: Bool, onSave: @escaping (TagAlarm) -> Void, onDelete: @escaping (TagAlarm) -> Void) {
         _alarm = State(initialValue: alarm)
-        _time = State(initialValue: Calendar.current.date(from: DateComponents(hour: alarm.hour, minute: alarm.minute)) ?? Date())
+        _time = State(initialValue: clockDate(alarm.hour, alarm.minute))
         self.isNew = isNew
         self.onSave = onSave
         self.onDelete = onDelete
@@ -118,23 +118,7 @@ struct AlarmFormView: View {
                 }
 
                 Section(header: Text("Repeat"), footer: Text(alarm.weekdays.isEmpty ? "Rings once." : "")) {
-                    HStack {
-                        ForEach(orderedWeekdays(), id: \.self) { weekday in
-                            let isOn = alarm.weekdays.contains(weekday)
-                            Button(Calendar.current.veryShortWeekdaySymbols[weekday - 1]) {
-                                if isOn {
-                                    alarm.weekdays.remove(weekday)
-                                } else {
-                                    alarm.weekdays.insert(weekday)
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .frame(width: 34, height: 34)
-                            .background(Circle().fill(isOn ? Color.accentColor : Color.secondary.opacity(0.15)))
-                            .foregroundColor(isOn ? .white : .primary)
-                            .frame(maxWidth: .infinity)
-                        }
-                    }
+                    WeekdayPicker(weekdays: $alarm.weekdays)
                 }
 
                 if !isNew {
@@ -161,25 +145,4 @@ struct AlarmFormView: View {
             )
         }
     }
-
-    // Weekday numbers starting from the user's first day of the week
-    private func orderedWeekdays() -> [Int] {
-        let first = Calendar.current.firstWeekday
-        return (0..<7).map { (first - 1 + $0) % 7 + 1 }
-    }
-}
-
-private func timeString(hour: Int, minute: Int) -> String {
-    let date = Calendar.current.date(from: DateComponents(hour: hour, minute: minute)) ?? Date()
-    return date.formatted(date: .omitted, time: .shortened)
-}
-
-private func weekdaySummary(_ weekdays: Set<Int>) -> String {
-    if weekdays.isEmpty { return "Once" }
-    if weekdays == Set(1...7) { return "Every day" }
-    if weekdays == [2, 3, 4, 5, 6] { return "Weekdays" }
-    if weekdays == [1, 7] { return "Weekends" }
-
-    let symbols = Calendar.current.shortWeekdaySymbols
-    return weekdays.sorted().map { symbols[$0 - 1] }.joined(separator: " ")
 }

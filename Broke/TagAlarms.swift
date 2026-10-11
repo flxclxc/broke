@@ -61,18 +61,18 @@ struct AlarmSession: Codable {
     private static let key = "alarmSession"
 
     static func load() -> AlarmSession? {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        guard let data = SharedDefaults.store.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(AlarmSession.self, from: data)
     }
 
     func save() {
         if let data = try? JSONEncoder().encode(self) {
-            UserDefaults.standard.set(data, forKey: Self.key)
+            SharedDefaults.store.set(data, forKey: Self.key)
         }
     }
 
     static func clear() {
-        UserDefaults.standard.removeObject(forKey: key)
+        SharedDefaults.store.removeObject(forKey: key)
     }
 
     func contains(_ id: UUID) -> Bool {
@@ -85,6 +85,8 @@ struct TagAlarmMetadata: AlarmMetadata {
 }
 
 class TagAlarmManager: ObservableObject {
+    static let shared = TagAlarmManager()
+
     static let followUpDelay: TimeInterval = 120
     // Stops nagging after about an hour so a forgotten alarm can't ring forever
     static let maxFollowUps = 30
@@ -114,7 +116,7 @@ class TagAlarmManager: ObservableObject {
     // MARK: - Persistence
 
     static func loadAlarms() -> [TagAlarm] {
-        guard let data = UserDefaults.standard.data(forKey: alarmsKey),
+        guard let data = SharedDefaults.store.data(forKey: alarmsKey),
               let alarms = try? JSONDecoder().decode([TagAlarm].self, from: data) else {
             return []
         }
@@ -123,7 +125,7 @@ class TagAlarmManager: ObservableObject {
 
     static func saveAlarms(_ alarms: [TagAlarm]) {
         if let data = try? JSONEncoder().encode(alarms) {
-            UserDefaults.standard.set(data, forKey: alarmsKey)
+            SharedDefaults.store.set(data, forKey: alarmsKey)
         }
     }
 
@@ -269,7 +271,8 @@ class TagAlarmManager: ObservableObject {
         guard var current = session else { return }
 
         // Bedtime is satisfied once the phone is blocked
-        if current.kind == .bedtime && UserDefaults.standard.bool(forKey: "isBlocking") {
+        let isBlocked = SharedDefaults.store.bool(forKey: "isBlocking") || !ScheduleStore.activeIDs().isEmpty
+        if current.kind == .bedtime && isBlocked {
             finish(current)
             return
         }

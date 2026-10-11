@@ -9,87 +9,93 @@ import ManagedSettings
 import FamilyControls
 
 class AppBlocker: ObservableObject {
+    static let shared = AppBlocker()
     static let maxEmergencyUnblocks = 5
 
     let store = ManagedSettingsStore()
     @Published var isBlocking = false
     @Published var isAuthorized = false
     @Published var emergencyUnblocksRemaining = AppBlocker.maxEmergencyUnblocks
-    
+    // Set when Screen Time access was turned off mid-block, so the UI can call it out
+    @Published var permissionRevokedWhileBlocking = false
+
     init() {
         loadBlockingState()
         Task {
             await requestAuthorization()
         }
     }
-    
+
+    @MainActor
     func requestAuthorization() async {
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
-            DispatchQueue.main.async {
-                self.isAuthorized = true
-            }
+            isAuthorized = true
         } catch {
             print("Failed to request authorization: \(error)")
-            DispatchQueue.main.async {
-                self.isAuthorized = false
-            }
+            isAuthorized = false
         }
     }
-    
-    func toggleBlocking(for profile: Profile) {
+
+    func block(with profile: Profile) {
         guard isAuthorized else {
             print("Not authorized to block apps")
             return
         }
-        
-        isBlocking.toggle()
+
+        NSLog("Blocking \(profile.appTokens.count) apps, \(profile.webDomainTokens.count) websites")
+        isBlocking = true
         saveBlockingState()
-        applyBlockingSettings(for: profile)
+        Shields.apply(profile, to: store)
+        StatsStore.start(.manual)
     }
-    
+
+    func unblock() {
+        isBlocking = false
+        saveBlockingState()
+        Shields.clear(store)
+        StatsStore.end(.manual, reason: .tag)
+    }
+
     // Escape hatch for a lost tag; limited so it can't replace the tag
     func emergencyUnblock() {
-        guard isBlocking, emergencyUnblocksRemaining > 0 else { return }
-        
+        guard isBlocking || !ScheduleStore.activeIDs().isEmpty, emergencyUnblocksRemaining > 0 else { return }
+
         emergencyUnblocksRemaining -= 1
         isBlocking = false
         saveBlockingState()
-        clearBlockingSettings()
+        Shields.clear(store)
+        StatsStore.end(.manual, reason: .emergency)
+        ScheduleManager.shared.endActiveEarly(reason: .emergency)
     }
-    
-    func applyBlockingSettings(for profile: Profile) {
-        guard isBlocking else {
-            clearBlockingSettings()
-            return
+
+    // Turning off Screen Time access in Settings drops every shield, which we can't prevent,
+    // so at least end the block honestly and record it as a break
+    func checkAuthorization() {
+        let status = AuthorizationCenter.shared.authorizationStatus
+        isAuthorized = status == .approved
+        // Only an explicit denial counts; a transient unknown state must not end a block
+        guard status == .denied, isBlocking || !ScheduleStore.activeIDs().isEmpty else { return }
+
+        isBlocking = false
+        saveBlockingState()
+        StatsStore.endAll(reason: .permissionRevoked)
+        for id in ScheduleStore.activeIDs() {
+            ScheduleStore.setActive(id, false)
         }
-        
-        NSLog("Blocking \(profile.appTokens.count) apps, \(profile.webDomainTokens.count) websites")
-        store.shield.applications = profile.appTokens.isEmpty ? nil : profile.appTokens
-        store.shield.applicationCategories = profile.categoryTokens.isEmpty ? ShieldSettings.ActivityCategoryPolicy.none : .specific(profile.categoryTokens)
-        store.shield.webDomains = profile.webDomainTokens.isEmpty ? nil : profile.webDomainTokens
-        store.shield.webDomainCategories = profile.categoryTokens.isEmpty ? ShieldSettings.ActivityCategoryPolicy.none : .specific(profile.categoryTokens)
-        // Deleting the app would drop its shields, so prevent it while blocking
-        store.application.denyAppRemoval = true
+        ScheduleManager.shared.refresh()
+        permissionRevokedWhileBlocking = true
     }
-    
-    private func clearBlockingSettings() {
-        store.shield.applications = nil
-        store.shield.applicationCategories = ShieldSettings.ActivityCategoryPolicy.none
-        store.shield.webDomains = nil
-        store.shield.webDomainCategories = ShieldSettings.ActivityCategoryPolicy.none
-        store.application.denyAppRemoval = false
-    }
-    
+
     private func loadBlockingState() {
-        isBlocking = UserDefaults.standard.bool(forKey: "isBlocking")
-        if UserDefaults.standard.object(forKey: "emergencyUnblocksRemaining") != nil {
-            emergencyUnblocksRemaining = UserDefaults.standard.integer(forKey: "emergencyUnblocksRemaining")
+        isBlocking = SharedDefaults.store.bool(forKey: "isBlocking")
+        if SharedDefaults.store.object(forKey: "emergencyUnblocksRemaining") != nil {
+            emergencyUnblocksRemaining = SharedDefaults.store.integer(forKey: "emergencyUnblocksRemaining")
         }
     }
-    
+
     private func saveBlockingState() {
-        UserDefaults.standard.set(isBlocking, forKey: "isBlocking")
-        UserDefaults.standard.set(emergencyUnblocksRemaining, forKey: "emergencyUnblocksRemaining")
+        SharedDefaults.store.set(isBlocking, forKey: "isBlocking")
+        SharedDefaults.store.set(emergencyUnblocksRemaining, forKey: "emergencyUnblocksRemaining")
     }
 }

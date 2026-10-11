@@ -5,7 +5,6 @@
 //  Created by Oz Tamir on 22/08/2024.
 //
 import SwiftUI
-import CoreNFC
 import SFSymbolsPicker
 import FamilyControls
 import ManagedSettings
@@ -17,6 +16,7 @@ enum BrokerAlert: Identifiable {
     case notAuthorized
     case emptyProfile
     case emergencyUnblock
+    case permissionRevoked
 
     var id: String {
         switch self {
@@ -26,46 +26,42 @@ enum BrokerAlert: Identifiable {
         case .notAuthorized: return "notAuthorized"
         case .emptyProfile: return "emptyProfile"
         case .emergencyUnblock: return "emergencyUnblock"
+        case .permissionRevoked: return "permissionRevoked"
         }
     }
+}
+
+enum BrokerSheet: String, Identifiable {
+    case alarms, schedules, stats, tags
+
+    var id: String { rawValue }
 }
 
 struct BrokerView: View {
     @EnvironmentObject private var appBlocker: AppBlocker
     @EnvironmentObject private var profileManager: ProfileManager
     @EnvironmentObject private var alarmManager: TagAlarmManager
+    @EnvironmentObject private var scheduleManager: ScheduleManager
     @StateObject private var nfcReader = NFCReader()
-    
-    // Random per-install phrase, so a tag written from the public source code can't unlock this phone
-    private static let tagPhrase: String = {
-        let key = "tagPhrase"
-        if let phrase = UserDefaults.standard.string(forKey: key) {
-            return phrase
-        }
-        let phrase = "BROKE-\(UUID().uuidString)"
-        UserDefaults.standard.set(phrase, forKey: key)
-        return phrase
-    }()
-    
+
     @State private var activeAlert: BrokerAlert?
-    @State private var showAlarms = false
-    
-    private var isBlocking : Bool {
-        get {
-            return appBlocker.isBlocking
-        }
+    @State private var activeSheet: BrokerSheet?
+
+    // Blocked either by the tag or by a schedule
+    private var isBlocking: Bool {
+        appBlocker.isBlocking || !scheduleManager.activeIDs.isEmpty
     }
-    
+
     var body: some View {
         NavigationView {
             GeometryReader { geometry in
                 ZStack {
                     VStack(spacing: 0) {
                         blockOrUnblockButton(geometry: geometry)
-                        
+
                         if !isBlocking {
                             Divider()
-                            
+
                             ProfilesPicker(profileManager: profileManager)
                                 .frame(height: geometry.size.height / 2)
                                 .transition(.move(edge: .bottom))
@@ -74,24 +70,50 @@ struct BrokerView: View {
                     .background(isBlocking ? Color("BlockingBackground") : Color("NonBlockingBackground"))
                 }
             }
-            .navigationBarItems(leading: alarmsButton, trailing: createTagButton)
+            .navigationBarItems(leading: menuButton, trailing: createTagButton)
             .alert(item: $activeAlert) { alert in
                 makeAlert(alert)
             }
-            .sheet(isPresented: $showAlarms) {
-                AlarmsView()
-                    .environmentObject(alarmManager)
+            .sheet(item: $activeSheet) { sheet in
+                sheetView(sheet)
             }
         }
         .animation(.spring(), value: isBlocking)
+        .onReceive(appBlocker.$permissionRevokedWhileBlocking) { revoked in
+            if revoked {
+                activeAlert = .permissionRevoked
+                appBlocker.permissionRevokedWhileBlocking = false
+            }
+        }
     }
-    
+
+    @ViewBuilder
+    private func sheetView(_ sheet: BrokerSheet) -> some View {
+        switch sheet {
+        case .alarms:
+            AlarmsView()
+                .environmentObject(alarmManager)
+        case .schedules:
+            SchedulesView()
+                .environmentObject(scheduleManager)
+                .environmentObject(profileManager)
+                .environmentObject(appBlocker)
+        case .stats:
+            StatsView()
+                .environmentObject(appBlocker)
+        case .tags:
+            TagSettingsView()
+                .environmentObject(appBlocker)
+                .environmentObject(scheduleManager)
+        }
+    }
+
     private func makeAlert(_ alert: BrokerAlert) -> Alert {
         switch alert {
         case .wrongTag:
             return Alert(
                 title: Text("Not a Broker Tag"),
-                message: Text("You can create a new Broker tag using the + button"),
+                message: Text("This tag isn't paired with this phone. You can create a new Broker tag using the + button."),
                 dismissButton: .default(Text("OK"))
             )
         case .createTag:
@@ -125,7 +147,7 @@ struct BrokerView: View {
         case .emergencyUnblock:
             return Alert(
                 title: Text("Emergency Unblock"),
-                message: Text("This unblocks without your tag. You have \(appBlocker.emergencyUnblocksRemaining) left and they don't come back."),
+                message: Text("This unblocks without your tag, including any scheduled block. You have \(appBlocker.emergencyUnblocksRemaining) left and they don't come back."),
                 primaryButton: .destructive(Text("Unblock")) {
                     withAnimation(.spring()) {
                         appBlocker.emergencyUnblock()
@@ -133,27 +155,37 @@ struct BrokerView: View {
                 },
                 secondaryButton: .cancel()
             )
+        case .permissionRevoked:
+            return Alert(
+                title: Text("Block Broken"),
+                message: Text("Screen Time access was turned off, which removed your block. It's been recorded in your stats."),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
-    
+
     @ViewBuilder
     private func blockOrUnblockButton(geometry: GeometryProxy) -> some View {
         VStack(spacing: 8) {
             if let kind = alarmManager.activeKind {
-                Label(kind == .wakeUp ? "Wake-up alarm" : "Bedtime alarm", systemImage: kind.icon)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(kind == .wakeUp ? Color.orange : Color.indigo))
-                    .padding(.bottom, 8)
+                StatusBadge(
+                    text: kind == .wakeUp ? "Wake-up alarm" : "Bedtime alarm",
+                    icon: kind.icon,
+                    color: kind == .wakeUp ? .orange : .indigo
+                )
+            } else if !appBlocker.isBlocking, let schedule = scheduleManager.activeSchedules().first {
+                StatusBadge(
+                    text: "\(schedule.name) until \(clockString(schedule.endHour, schedule.endMinute))",
+                    icon: "calendar",
+                    color: .red
+                )
             }
-            
+
             Text(scanCaption)
                 .font(.caption)
                 .opacity(0.75)
                 .transition(.scale)
-            
+
             Button(action: {
                 withAnimation(.spring()) {
                     scanTag()
@@ -165,7 +197,7 @@ struct BrokerView: View {
                     .frame(height: geometry.size.height / 3)
             }
             .transition(.scale)
-            
+
             if isBlocking && appBlocker.emergencyUnblocksRemaining > 0 {
                 Button("Emergency unblock (\(appBlocker.emergencyUnblocksRemaining) left)") {
                     activeAlert = .emergencyUnblock
@@ -174,7 +206,7 @@ struct BrokerView: View {
                 .opacity(0.6)
                 .padding(.top, 24)
             }
-            
+
             #if DEBUG
             // Lets the full flow be tested without a physical tag; never in release builds
             Button("Simulate tag scan") {
@@ -191,7 +223,7 @@ struct BrokerView: View {
         .frame(height: isBlocking ? geometry.size.height : geometry.size.height / 2)
         .animation(.spring(), value: isBlocking)
     }
-    
+
     private var scanCaption: String {
         switch alarmManager.activeKind {
         case .wakeUp:
@@ -199,74 +231,97 @@ struct BrokerView: View {
         case .bedtime:
             return isBlocking ? "Tap and scan your tag to stop the alarm" : "Brick your phone to stop the alarm"
         case nil:
-            return isBlocking ? "Tap to unblock" : "Tap to block"
+            if appBlocker.isBlocking {
+                return "Tap to unblock"
+            }
+            return isBlocking ? "Tap to end the scheduled block early" : "Tap to block"
         }
     }
-    
-    // simulated: skip NFC and act as if the real tag was scanned (debug builds only)
+
+    // simulated: skip NFC and act as if a paired tag was scanned (debug builds only)
     private func scanTag(simulated: Bool = false) {
-        let alarmKind = alarmManager.activeKind
-        // A wake-up alarm, or a bedtime alarm once already blocked, is dismissed without toggling
-        let togglesBlocking = !(alarmKind == .wakeUp || (alarmKind == .bedtime && isBlocking))
-        
-        if togglesBlocking {
-            guard appBlocker.isAuthorized else {
-                activeAlert = .notAuthorized
-                return
-            }
-            guard isBlocking || !profileManager.currentProfile.isEmpty else {
-                activeAlert = .emptyProfile
-                return
-            }
+        let action: TagAction
+        switch TagActions.plan() {
+        case .success(let planned):
+            action = planned
+        case .failure(.notAuthorized):
+            activeAlert = .notAuthorized
+            return
+        case .failure(.emptyProfile):
+            activeAlert = .emptyProfile
+            return
         }
-        
-        let handleScan = { (payload: String) in
-            guard payload == Self.tagPhrase else {
-                activeAlert = .wrongTag
-                NSLog("Wrong Tag!\nPayload: \(payload)")
-                return
-            }
-            
-            if togglesBlocking {
-                NSLog("Toggling block")
-                appBlocker.toggleBlocking(for: profileManager.currentProfile)
-            }
-            if alarmKind == .wakeUp || (alarmKind == .bedtime && appBlocker.isBlocking) {
-                alarmManager.endSession()
-            }
-        }
-        
+
         if simulated {
-            handleScan(Self.tagPhrase)
-        } else {
-            nfcReader.scan(completion: handleScan)
+            TagActions.perform(action)
+            return
         }
-    }
-    
-    @ViewBuilder
-    private var alarmsButton: some View {
-        if TagAlarmManager.isSupported {
-            Button(action: {
-                showAlarms = true
-            }) {
-                Image(systemName: "alarm")
+
+        nfcReader.scan { scan in
+            guard TagSecurity.isValid(scan) else {
+                activeAlert = .wrongTag
+                NSLog("Wrong Tag! Payload: \(scan.text ?? "none"), ID: \(scan.tagID)")
+                return
+            }
+            withAnimation(.spring()) {
+                _ = TagActions.perform(action)
             }
         }
     }
-    
+
+    private var menuButton: some View {
+        Menu {
+            if TagAlarmManager.isSupported {
+                Button(action: { activeSheet = .alarms }) {
+                    Label("Alarms", systemImage: "alarm")
+                }
+            }
+            Button(action: { activeSheet = .schedules }) {
+                Label("Schedules", systemImage: "calendar")
+            }
+            Button(action: { activeSheet = .stats }) {
+                Label("Stats", systemImage: "chart.bar")
+            }
+            Button(action: { activeSheet = .tags }) {
+                Label("Tags & Shortcut", systemImage: "wave.3.right")
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal")
+        }
+    }
+
     private var createTagButton: some View {
         Button(action: {
             activeAlert = .createTag
         }) {
             Image(systemName: "plus")
         }
-        // While blocking, writing a fresh tag would be a way to unblock without the real one
-        .disabled(isBlocking || !NFCNDEFReaderSession.readingAvailable)
+        // While blocking, pairing a fresh tag would be a way to unblock without the real one
+        .disabled(isBlocking || !NFCReader.isAvailable)
     }
-    
+
     private func createBrokerTag() {
-        nfcReader.write(Self.tagPhrase) { success in
-            activeAlert = .tagCreated(success: success)
+        nfcReader.write(TagSecurity.phrase) { tagID in
+            if let tagID = tagID {
+                TagSecurity.pair(tagID)
+            }
+            activeAlert = .tagCreated(success: tagID != nil)
         }
+    }
+}
+
+struct StatusBadge: View {
+    let text: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        Label(text, systemImage: icon)
+            .font(.headline)
+            .foregroundColor(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(color))
+            .padding(.bottom, 8)
     }
 }
