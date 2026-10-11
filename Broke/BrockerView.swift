@@ -174,6 +174,18 @@ struct BrokerView: View {
                 .opacity(0.6)
                 .padding(.top, 24)
             }
+            
+            #if DEBUG
+            // Lets the full flow be tested without a physical tag; never in release builds
+            Button("Simulate tag scan") {
+                withAnimation(.spring()) {
+                    scanTag(simulated: true)
+                }
+            }
+            .font(.caption)
+            .buttonStyle(.bordered)
+            .padding(.top, 12)
+            #endif
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(height: isBlocking ? geometry.size.height : geometry.size.height / 2)
@@ -191,7 +203,8 @@ struct BrokerView: View {
         }
     }
     
-    private func scanTag() {
+    // simulated: skip NFC and act as if the real tag was scanned (debug builds only)
+    private func scanTag(simulated: Bool = false) {
         let alarmKind = alarmManager.activeKind
         // A wake-up alarm, or a bedtime alarm once already blocked, is dismissed without toggling
         let togglesBlocking = !(alarmKind == .wakeUp || (alarmKind == .bedtime && isBlocking))
@@ -207,7 +220,7 @@ struct BrokerView: View {
             }
         }
         
-        nfcReader.scan { payload in
+        let handleScan = { (payload: String) in
             guard payload == Self.tagPhrase else {
                 activeAlert = .wrongTag
                 NSLog("Wrong Tag!\nPayload: \(payload)")
@@ -221,6 +234,12 @@ struct BrokerView: View {
             if alarmKind == .wakeUp || (alarmKind == .bedtime && appBlocker.isBlocking) {
                 alarmManager.endSession()
             }
+        }
+        
+        if simulated {
+            handleScan(Self.tagPhrase)
+        } else {
+            nfcReader.scan(completion: handleScan)
         }
     }
     
