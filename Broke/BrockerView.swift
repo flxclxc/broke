@@ -33,6 +33,7 @@ enum BrokerAlert: Identifiable {
 struct BrokerView: View {
     @EnvironmentObject private var appBlocker: AppBlocker
     @EnvironmentObject private var profileManager: ProfileManager
+    @EnvironmentObject private var alarmManager: TagAlarmManager
     @StateObject private var nfcReader = NFCReader()
     
     // Random per-install phrase, so a tag written from the public source code can't unlock this phone
@@ -47,6 +48,7 @@ struct BrokerView: View {
     }()
     
     @State private var activeAlert: BrokerAlert?
+    @State private var showAlarms = false
     
     private var isBlocking : Bool {
         get {
@@ -72,9 +74,13 @@ struct BrokerView: View {
                     .background(isBlocking ? Color("BlockingBackground") : Color("NonBlockingBackground"))
                 }
             }
-            .navigationBarItems(trailing: createTagButton)
+            .navigationBarItems(leading: alarmsButton, trailing: createTagButton)
             .alert(item: $activeAlert) { alert in
                 makeAlert(alert)
+            }
+            .sheet(isPresented: $showAlarms) {
+                AlarmsView()
+                    .environmentObject(alarmManager)
             }
         }
         .animation(.spring(), value: isBlocking)
@@ -133,7 +139,17 @@ struct BrokerView: View {
     @ViewBuilder
     private func blockOrUnblockButton(geometry: GeometryProxy) -> some View {
         VStack(spacing: 8) {
-            Text(isBlocking ? "Tap to unblock" : "Tap to block")
+            if let kind = alarmManager.activeKind {
+                Label(kind == .wakeUp ? "Wake-up alarm" : "Bedtime alarm", systemImage: kind.icon)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(kind == .wakeUp ? Color.orange : Color.indigo))
+                    .padding(.bottom, 8)
+            }
+            
+            Text(scanCaption)
                 .font(.caption)
                 .opacity(0.75)
                 .transition(.scale)
@@ -164,23 +180,57 @@ struct BrokerView: View {
         .animation(.spring(), value: isBlocking)
     }
     
-    private func scanTag() {
-        guard appBlocker.isAuthorized else {
-            activeAlert = .notAuthorized
-            return
+    private var scanCaption: String {
+        switch alarmManager.activeKind {
+        case .wakeUp:
+            return "Tap and scan your tag to stop the alarm"
+        case .bedtime:
+            return isBlocking ? "Tap and scan your tag to stop the alarm" : "Brick your phone to stop the alarm"
+        case nil:
+            return isBlocking ? "Tap to unblock" : "Tap to block"
         }
-        guard isBlocking || !profileManager.currentProfile.isEmpty else {
-            activeAlert = .emptyProfile
-            return
+    }
+    
+    private func scanTag() {
+        let alarmKind = alarmManager.activeKind
+        // A wake-up alarm, or a bedtime alarm once already blocked, is dismissed without toggling
+        let togglesBlocking = !(alarmKind == .wakeUp || (alarmKind == .bedtime && isBlocking))
+        
+        if togglesBlocking {
+            guard appBlocker.isAuthorized else {
+                activeAlert = .notAuthorized
+                return
+            }
+            guard isBlocking || !profileManager.currentProfile.isEmpty else {
+                activeAlert = .emptyProfile
+                return
+            }
         }
         
         nfcReader.scan { payload in
-            if payload == Self.tagPhrase {
-                NSLog("Toggling block")
-                appBlocker.toggleBlocking(for: profileManager.currentProfile)
-            } else {
+            guard payload == Self.tagPhrase else {
                 activeAlert = .wrongTag
                 NSLog("Wrong Tag!\nPayload: \(payload)")
+                return
+            }
+            
+            if togglesBlocking {
+                NSLog("Toggling block")
+                appBlocker.toggleBlocking(for: profileManager.currentProfile)
+            }
+            if alarmKind == .wakeUp || (alarmKind == .bedtime && appBlocker.isBlocking) {
+                alarmManager.endSession()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var alarmsButton: some View {
+        if TagAlarmManager.isSupported {
+            Button(action: {
+                showAlarms = true
+            }) {
+                Image(systemName: "alarm")
             }
         }
     }
