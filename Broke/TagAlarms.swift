@@ -96,7 +96,7 @@ class TagAlarmManager: ObservableObject {
     @Published var isAuthorized = false
 
     static var isSupported: Bool {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.1, *) {
             return true
         }
         return false
@@ -105,7 +105,7 @@ class TagAlarmManager: ObservableObject {
     init() {
         alarms = Self.loadAlarms()
         activeKind = AlarmSession.load()?.kind
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.1, *) {
             isAuthorized = AlarmManager.shared.authorizationState == .authorized
             observeAlarms()
         }
@@ -138,7 +138,7 @@ class TagAlarmManager: ObservableObject {
         alarms.sort { ($0.hour, $0.minute) < ($1.hour, $1.minute) }
         Self.saveAlarms(alarms)
 
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.1, *) {
             Task { await reschedule(alarm) }
         }
     }
@@ -147,7 +147,7 @@ class TagAlarmManager: ObservableObject {
         alarms.removeAll { $0.id == alarm.id }
         Self.saveAlarms(alarms)
 
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.1, *) {
             try? AlarmManager.shared.cancel(id: alarm.id)
         }
     }
@@ -156,7 +156,7 @@ class TagAlarmManager: ObservableObject {
 
     // Called after a successful tag scan (and, for bedtime, once the phone is blocked)
     func endSession() {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.1, *) {
             Self.finish(AlarmSession.load())
         } else {
             AlarmSession.clear()
@@ -167,7 +167,7 @@ class TagAlarmManager: ObservableObject {
 
     // MARK: - AlarmKit
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     func requestAuthorization() async {
         let state = try? await AlarmManager.shared.requestAuthorization()
         await MainActor.run {
@@ -175,7 +175,7 @@ class TagAlarmManager: ObservableObject {
         }
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     private func reschedule(_ alarm: TagAlarm) async {
         try? AlarmManager.shared.cancel(id: alarm.id)
         guard alarm.isEnabled else { return }
@@ -200,18 +200,16 @@ class TagAlarmManager: ObservableObject {
         }
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     private func observeAlarms() {
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             for await scheduled in AlarmManager.shared.alarmUpdates {
-                await MainActor.run {
-                    self?.refresh(from: scheduled)
-                }
+                self?.refresh(from: scheduled)
             }
         }
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     private func refresh(from scheduled: [Alarm]) {
         let ours = Set(alarms.map(\.id))
         var session = AlarmSession.load()
@@ -239,7 +237,7 @@ class TagAlarmManager: ObservableObject {
         activeKind = session?.kind
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     static func configuration(kind: TagAlarm.Kind, id: UUID, schedule: Alarm.Schedule) -> AlarmManager.AlarmConfiguration<TagAlarmMetadata> {
         let alert = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: kind.alertTitle),
@@ -261,7 +259,7 @@ class TagAlarmManager: ObservableObject {
     }
 
     // The alarm was silenced without a tag scan, so ring again shortly
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     static func handleUnscannedDismiss(alarmID: UUID) async {
         var session = AlarmSession.load()
         if session?.contains(alarmID) != true {
@@ -299,7 +297,7 @@ class TagAlarmManager: ObservableObject {
         }
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     private static func finish(_ session: AlarmSession?) {
         AlarmSession.clear()
         guard let session = session else { return }
@@ -318,7 +316,7 @@ class TagAlarmManager: ObservableObject {
         }
     }
 
-    @available(iOS 26.0, *)
+    @available(iOS 26.1, *)
     private static func localeWeekday(_ weekday: Int) -> Locale.Weekday? {
         switch weekday {
         case 1: return .sunday
@@ -335,7 +333,7 @@ class TagAlarmManager: ObservableObject {
 
 // MARK: - Intents
 
-@available(iOS 26.0, *)
+@available(iOS 26.1, *)
 struct StopTagAlarmIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Stop Alarm"
     static var isDiscoverable = false
@@ -357,7 +355,7 @@ struct StopTagAlarmIntent: LiveActivityIntent {
     }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 26.1, *)
 struct ScanTagAlarmIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "Scan Tag"
     static var isDiscoverable = false
