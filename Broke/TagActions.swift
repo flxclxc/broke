@@ -80,31 +80,33 @@ enum TagActions {
         }
     }
 
-    // Returns a short description of what happened
+    // Returns what happened, for the status notification
     @discardableResult
-    static func perform(_ action: TagAction) -> String {
+    static func perform(_ action: TagAction) -> StatusMessage {
         let blocker = AppBlocker.shared
         let profile = ProfileManager.shared.currentProfile
 
         switch action {
         case .dismissWakeAlarm:
             TagAlarmManager.shared.endSession()
-            return "Alarm stopped. Good morning!"
+            return StatusMessage(title: "Alarm stopped", body: "Good morning!")
         case .dismissBedtimeAlarm(let blockFirst):
             if blockFirst {
                 blocker.block(with: profile)
             }
             TagAlarmManager.shared.endSession()
-            return "Phone bricked. Good night!"
+            return StatusMessage(title: "Phone bricked", body: "Good night! Tap your tag in the morning to unbrick.")
         case .unblock:
+            let started = StatsStore.load().last { $0.source == .manual && $0.end == nil }?.start
             blocker.unblock()
-            return "Unblocked."
+            let body = started.map { "You were bricked for \(durationString(Date().timeIntervalSince($0)))." } ?? "Your apps are unblocked."
+            return StatusMessage(title: "Phone unbricked", body: body)
         case .endSchedules:
             ScheduleManager.shared.endActiveEarly(reason: .tag)
-            return "Scheduled block ended early."
+            return StatusMessage(title: "Scheduled block ended", body: "Ended early with your tag.")
         case .block:
             blocker.block(with: profile)
-            return "Phone bricked with \(profile.name)."
+            return StatusMessage(title: "Phone bricked", body: "\(profile.name) · Tap your tag to unbrick.")
         }
     }
 
@@ -132,20 +134,28 @@ struct TapBrokerTagIntent: AppIntent {
     var key: String
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult {
         guard key == TagSecurity.phrase else {
-            throw TapBrokerTagError.invalidKey
+            throw fail(.invalidKey)
         }
         _ = await AppBlocker.shared.ensureAuthorized()
 
         switch TagActions.plan() {
         case .success(let action):
-            return .result(dialog: IntentDialog(stringLiteral: TagActions.perform(action)))
+            // Broke posts its own notification, so the automation can run silently
+            StatusNotifier.post(TagActions.perform(action))
+            return .result()
         case .failure(.notAuthorized):
-            throw TapBrokerTagError.notAuthorized
+            throw fail(.notAuthorized)
         case .failure(.emptyProfile):
-            throw TapBrokerTagError.emptyProfile
+            throw fail(.emptyProfile)
         }
+    }
+
+    // Errors are otherwise invisible when the automation runs without notifications
+    private func fail(_ error: TapBrokerTagError) -> TapBrokerTagError {
+        StatusNotifier.post(StatusMessage(title: "Broke couldn't do that", body: String(localized: error.localizedStringResource)))
+        return error
     }
 }
 

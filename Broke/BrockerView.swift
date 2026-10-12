@@ -79,6 +79,9 @@ struct BrokerView: View {
             }
         }
         .animation(.spring(), value: isBlocking)
+        .onAppear {
+            StatusNotifier.requestPermission()
+        }
         .onReceive(appBlocker.$permissionRevokedWhileBlocking) { revoked in
             if revoked {
                 activeAlert = .permissionRevoked

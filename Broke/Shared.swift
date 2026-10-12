@@ -9,6 +9,7 @@
 import Foundation
 import FamilyControls
 import ManagedSettings
+import UserNotifications
 
 enum SharedDefaults {
     static let appGroup = "group.com.flxclxc.Broke"
@@ -154,6 +155,11 @@ struct BlockSchedule: Identifiable, Codable, Equatable {
         weekdays.isEmpty || weekdays.contains(weekday)
     }
 
+    var endTimeString: String {
+        let end = Calendar.current.date(from: DateComponents(hour: endHour, minute: endMinute)) ?? Date()
+        return end.formatted(date: .omitted, time: .shortened)
+    }
+
     var durationMinutes: Int {
         let start = startHour * 60 + startMinute
         let end = endHour * 60 + endMinute
@@ -258,5 +264,32 @@ enum StatsStore {
             sessions[index].endReason = reason
         }
         save(sessions)
+    }
+}
+
+// MARK: - Status notifications
+
+struct StatusMessage {
+    let title: String
+    let body: String
+}
+
+enum StatusNotifier {
+    private static let identifier = "broke.status"
+
+    static func requestPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    // Each status replaces the previous one so they don't pile up
+    static func post(_ message: StatusMessage) {
+        let content = UNMutableNotificationContent()
+        content.title = message.title
+        content.body = message.body
+        content.threadIdentifier = "broke"
+
+        let center = UNUserNotificationCenter.current()
+        center.removeDeliveredNotifications(withIdentifiers: [identifier])
+        center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
     }
 }

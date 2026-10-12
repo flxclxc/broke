@@ -26,6 +26,7 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         Shields.apply(profile, to: ScheduleStore.managedStore(for: id))
         ScheduleStore.setActive(id, true)
         StatsStore.start(.schedule, scheduleID: id)
+        StatusNotifier.post(StatusMessage(title: "\(schedule.name) block started", body: "\(profile.name) until \(schedule.endTimeString)."))
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
@@ -38,6 +39,8 @@ class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         if ScheduleStore.activeIDs().contains(id) {
             ScheduleStore.setActive(id, false)
             StatsStore.end(.schedule, scheduleID: id, reason: .scheduleEnded)
+            let name = ScheduleStore.load().first { $0.id == id }?.name ?? "Scheduled"
+            StatusNotifier.post(StatusMessage(title: "\(name) block finished", body: "Your apps are unblocked."))
         }
     }
 }
