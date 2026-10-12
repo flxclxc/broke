@@ -194,8 +194,10 @@ struct BrokerView: View {
                 Image(isBlocking ? "RedIcon" : "GreenIcon")
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(height: geometry.size.height / 3)
+                    // Shrinks to leave room for the badge, caption and buttons around it
+                    .frame(maxHeight: geometry.size.height / 3)
             }
+            .layoutPriority(-1)
             .transition(.scale)
 
             if isBlocking && appBlocker.emergencyUnblocksRemaining > 0 {
@@ -219,6 +221,7 @@ struct BrokerView: View {
             .padding(.top, 12)
             #endif
         }
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .frame(height: isBlocking ? geometry.size.height : geometry.size.height / 2)
         .animation(.spring(), value: isBlocking)
