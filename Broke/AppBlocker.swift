@@ -39,6 +39,23 @@ class AppBlocker: ObservableObject {
         }
     }
 
+    // When launched in the background (e.g. by the Shortcuts intent) the status starts out
+    // as notDetermined and only settles a moment later, so wait for it before giving up
+    @MainActor
+    func ensureAuthorized() async -> Bool {
+        if isAuthorized { return true }
+        
+        for _ in 0..<20 where AuthorizationCenter.shared.authorizationStatus == .notDetermined {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+        if AuthorizationCenter.shared.authorizationStatus != .approved {
+            // Re-confirming access that was already granted succeeds without a prompt
+            await requestAuthorization()
+        }
+        isAuthorized = AuthorizationCenter.shared.authorizationStatus == .approved || isAuthorized
+        return isAuthorized
+    }
+    
     func block(with profile: Profile) {
         guard isAuthorized else {
             print("Not authorized to block apps")

@@ -136,6 +136,7 @@ struct TapBrokerTagIntent: AppIntent {
         guard key == TagSecurity.phrase else {
             throw TapBrokerTagError.invalidKey
         }
+        _ = await AppBlocker.shared.ensureAuthorized()
 
         switch TagActions.plan() {
         case .success(let action):
