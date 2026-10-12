@@ -21,6 +21,8 @@ class AppBlocker: ObservableObject {
 
     init() {
         loadBlockingState()
+        // Read the current status right away; the Shortcuts intent can run before the request below finishes
+        isAuthorized = AuthorizationCenter.shared.authorizationStatus == .approved
         Task {
             await requestAuthorization()
         }
